@@ -1,6 +1,6 @@
 import { getContent } from "@/lib/content";
-import { Shield } from "lucide-react";
 import { Link } from "react-router-dom";
+import logo from "@/assets/logo.png";
 
 const Footer = () => {
   const content = getContent();
@@ -12,7 +12,7 @@ const Footer = () => {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <Shield className="w-6 h-6 text-radar" />
+              <img src={logo} alt="IAFVO Logo" className="w-8 h-8 object-contain" />
               <span className="font-heading text-sm font-bold text-radar tracking-wider">{content.general.shortName}</span>
             </div>
             <p className="text-sm text-muted-foreground font-body leading-relaxed">

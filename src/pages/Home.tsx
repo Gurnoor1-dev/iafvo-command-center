@@ -1,9 +1,10 @@
 import Layout from "@/components/Layout";
 import RadarBackground from "@/components/RadarBackground";
 import { getContent } from "@/lib/content";
-import { Shield, Plane, Users, MapPin } from "lucide-react";
+import { Plane, Users, MapPin, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import logo from "@/assets/logo.png";
 
 const Home = () => {
   const content = getContent();
@@ -30,10 +31,7 @@ const Home = () => {
           >
             <div className="flex justify-center mb-6">
               <div className="relative">
-                <Shield className="w-20 h-20 text-radar glow-green" />
-                <div className="absolute inset-0 animate-pulse-green">
-                  <Shield className="w-20 h-20 text-radar opacity-50" />
-                </div>
+                <img src={logo} alt="IAFVO Logo" className="w-24 h-24 md:w-32 md:h-32 object-contain glow-green" />
               </div>
             </div>
 
