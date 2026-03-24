@@ -28,7 +28,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <Shield className="w-8 h-8 text-radar" />
+            <img src={logo} alt="IAFVO Logo" className="w-10 h-10 object-contain" />
             <div>
               <span className="font-heading text-sm font-bold text-radar tracking-wider">{content.general.shortName}</span>
               <span className="hidden md:block text-[10px] text-muted-foreground font-mono tracking-widest uppercase">
