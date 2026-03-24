@@ -30,9 +30,7 @@ const Home = () => {
             transition={{ duration: 0.8 }}
           >
             <div className="flex justify-center mb-6">
-              <div className="relative">
-                <img src={logo} alt="IAFVO Logo" className="w-24 h-24 md:w-32 md:h-32 object-contain glow-green" />
-              </div>
+              <img src={logo} alt="IAFVO Logo" className="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-[0_0_15px_hsl(var(--radar-green)/0.5)]" />
             </div>
 
             <div className="flex items-center justify-center gap-3 mb-4">
