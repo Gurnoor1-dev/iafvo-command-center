@@ -1,6 +1,6 @@
 import { getContent } from "@/lib/content";
-import { Shield } from "lucide-react";
 import { Link } from "react-router-dom";
+import logo from "@/assets/logo.png";
 
 const Footer = () => {
   const content = getContent();
