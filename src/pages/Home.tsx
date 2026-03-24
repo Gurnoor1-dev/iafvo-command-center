@@ -1,9 +1,10 @@
 import Layout from "@/components/Layout";
 import RadarBackground from "@/components/RadarBackground";
 import { getContent } from "@/lib/content";
-import { Shield, Plane, Users, MapPin } from "lucide-react";
+import { Plane, Users, MapPin, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import logo from "@/assets/logo.png";
 
 const Home = () => {
   const content = getContent();
