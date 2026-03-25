@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { getContent, saveContent, resetContent, SiteContent } from "@/lib/content";
-import { Shield, Save, RotateCcw, LogOut, Plus, Trash2, ChevronDown, ChevronRight, Upload, X } from "lucide-react";
+import { SiteContent } from "@/lib/content";
+import { supabase } from "@/lib/supabase"; // Ensure this path is correct
+import { Shield, Save, RotateCcw, LogOut, Plus, Trash2, ChevronDown, ChevronRight, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 
 const ADMIN_PASSWORD = "IAFVO@AdminAccess";
@@ -8,12 +9,34 @@ const ADMIN_PASSWORD = "IAFVO@AdminAccess";
 const Admin = () => {
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
-  const [content, setContent] = useState<SiteContent>(getContent());
+  const [content, setContent] = useState<SiteContent | null>(null);
   const [activeSection, setActiveSection] = useState<string>("general");
+  const [loading, setLoading] = useState(true);
 
+  // 1. Initial Auth Check & Data Fetch
   useEffect(() => {
     const stored = sessionStorage.getItem("iafvo_admin");
     if (stored === "true") setAuthenticated(true);
+
+    const fetchGlobalContent = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('site_data')
+          .select('content')
+          .eq('id', 1) // Assuming your row ID is 1
+          .single();
+
+        if (error) throw error;
+        if (data) setContent(data.content);
+      } catch (err) {
+        console.error("Fetch error:", err);
+        toast.error("Failed to load content from Supabase");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGlobalContent();
   }, []);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -32,21 +55,39 @@ const Admin = () => {
     setAuthenticated(false);
   };
 
-  const handleSave = () => {
-    saveContent(content);
-    toast.success("Content saved successfully");
+  // 2. Save to Supabase (Global Update)
+  const handleSave = async () => {
+    if (!content) return;
+    const toastId = toast.loading("Syncing with Supabase...");
+    try {
+      const { error } = await supabase
+        .from('site_data')
+        .update({ content: content })
+        .eq('id', 1);
+
+      if (error) throw error;
+      toast.success("Global update successful!", { id: toastId });
+    } catch (err) {
+      console.error("Save error:", err);
+      toast.error("Cloud sync failed", { id: toastId });
+    }
   };
 
-  const handleReset = () => {
-    if (confirm("Reset all content to defaults? This cannot be undone.")) {
-      resetContent();
-      setContent(getContent());
-      toast.success("Content reset to defaults");
-    }
+  // 3. Export Local JSON (For backup/migration)
+  const handleExport = () => {
+    if (!content) return;
+    const blob = new Blob([JSON.stringify(content, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "iafvo_backup.json";
+    link.click();
+    toast.success("Backup downloaded locally");
   };
 
   const updateField = (path: string, value: unknown) => {
     setContent(prev => {
+      if (!prev) return prev;
       const newContent = JSON.parse(JSON.stringify(prev));
       const keys = path.split(".");
       let obj = newContent;
@@ -58,12 +99,11 @@ const Admin = () => {
     });
   };
 
-  // Image Upload Helper
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 1024 * 1024) { // 1MB Limit for Base64 storage safety
-        toast.error("Image too large. Please use a file under 1MB.");
+      if (file.size > 800 * 1024) { // 800KB limit for Base64 safety
+        toast.error("Image too large. Keep it under 800KB.");
         return;
       }
       const reader = new FileReader();
@@ -78,7 +118,6 @@ const Admin = () => {
         <div className="w-full max-w-sm p-8 text-center">
           <Shield className="w-12 h-12 text-radar mx-auto mb-6" />
           <h1 className="font-heading text-lg text-foreground tracking-widest mb-2">ADMIN ACCESS</h1>
-          <p className="text-muted-foreground text-sm font-mono mb-8 tracking-wider">IAFVO COMMAND CENTER</p>
           <form onSubmit={handleLogin} className="space-y-4 text-left">
             <input
               type="password"
@@ -96,6 +135,8 @@ const Admin = () => {
     );
   }
 
+  if (loading || !content) return <div className="min-h-screen bg-background flex items-center justify-center font-mono text-radar animate-pulse">CONNECTING TO DATABASE...</div>;
+
   const sections = [
     { key: "general", label: "General" },
     { key: "about", label: "About Us" },
@@ -112,14 +153,14 @@ const Admin = () => {
       <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-radar px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Shield className="w-5 h-5 text-radar" />
-          <span className="font-heading text-xs text-radar tracking-widest uppercase">IAFVO Admin</span>
+          <span className="font-heading text-xs text-radar tracking-widest uppercase">IAFVO Cloud Control</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleReset} className="flex items-center gap-1 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground border border-radar rounded-sm font-mono transition-colors">
-            <RotateCcw className="w-3 h-3" /> Reset
+          <button onClick={handleExport} className="flex items-center gap-1 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground border border-radar rounded-sm font-mono transition-colors">
+            <Download className="w-3 h-3" /> Export
           </button>
           <button onClick={handleSave} className="flex items-center gap-1 px-4 py-1.5 text-xs bg-primary text-primary-foreground font-mono rounded-sm hover:bg-primary/90 glow-green">
-            <Save className="w-3 h-3" /> Save
+            <Save className="w-3 h-3" /> Push to Live
           </button>
           <button onClick={handleLogout} className="p-1.5 text-muted-foreground hover:text-foreground"><LogOut className="w-4 h-4" /></button>
         </div>
@@ -158,10 +199,10 @@ const Admin = () => {
   );
 };
 
-// --- Reusable Components ---
+// --- Helper Components ---
 
-const Field = ({ label, value, onChange, multiline = false }: { label: string; value: string; onChange: (v: string) => void; multiline?: boolean }) => (
-  <div>
+const Field = ({ label, value, onChange, multiline = false }: any) => (
+  <div className="mb-4">
     <label className="block font-mono text-[10px] tracking-widest text-radar-amber uppercase mb-1">{label}</label>
     {multiline ? (
       <textarea value={value} onChange={e => onChange(e.target.value)} rows={4} className="w-full bg-input border border-radar rounded-sm px-3 py-2 text-foreground font-body text-sm focus:outline-none focus:border-radar-green/60 resize-y" />
@@ -190,7 +231,7 @@ const ArrayEditor = ({ content, setContent, section, itemKey, fields, handleImag
       <div className="space-y-6">
         {items.map((item: any, i: number) => (
           <div key={i} className="bg-card border border-radar rounded-sm p-4 relative">
-            <button onClick={() => setContent({...content, [section]: {...sectionData, [itemKey]: items.filter((_:any, idx:number) => idx !== i)}})} className="absolute top-4 right-4 text-destructive"><Trash2 className="w-4 h-4" /></button>
+            <button onClick={() => setContent({...content, [section]: {...sectionData, [itemKey]: items.filter((_:any, idx:number) => idx !== i)}})} className="absolute top-4 right-4 text-destructive hover:scale-110 transition-transform"><Trash2 className="w-4 h-4" /></button>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {fields.map((field: string) => (
                 <div key={field}>
@@ -207,7 +248,7 @@ const ArrayEditor = ({ content, setContent, section, itemKey, fields, handleImag
                       </div>
                     </div>
                   ) : (
-                    <Field label={field} value={item[field] || ""} onChange={v => updateItem(i, field, v)} multiline={field === "bio" || field === "description" || field === "specs"} />
+                    <Field label={field} value={item[field] || ""} onChange={(v: string) => updateItem(i, field, v)} multiline={field === "bio" || field === "description" || field === "specs"} />
                   )}
                 </div>
               ))}
@@ -219,28 +260,29 @@ const ArrayEditor = ({ content, setContent, section, itemKey, fields, handleImag
   );
 };
 
-// Static Editors (Truncated for space, same as your original logic)
 const GeneralEditor = ({ content, updateField }: any) => (
   <div className="space-y-4">
-    <h2 className="font-heading text-sm tracking-widest text-foreground mb-6 uppercase">General Settings</h2>
-    <Field label="Org Name" value={content.general.orgName} onChange={v => updateField("general.orgName", v)} />
-    <Field label="Short Name" value={content.general.shortName} onChange={v => updateField("general.shortName", v)} />
-    <Field label="Tagline" value={content.general.tagline} onChange={v => updateField("general.tagline", v)} />
+    <h2 className="font-heading text-sm tracking-widest text-foreground mb-6 uppercase border-b border-radar pb-2">General Settings</h2>
+    <Field label="Organization Name" value={content.general.orgName} onChange={(v: string) => updateField("general.orgName", v)} />
+    <Field label="Short Name" value={content.general.shortName} onChange={(v: string) => updateField("general.shortName", v)} />
+    <Field label="Tagline" value={content.general.tagline} onChange={(v: string) => updateField("general.tagline", v)} />
   </div>
 );
 
 const AboutEditor = ({ content, updateField }: any) => (
   <div className="space-y-4">
-    <h2 className="font-heading text-sm tracking-widest text-foreground mb-6 uppercase">About Us</h2>
-    <Field label="Title" value={content.about.title} onChange={v => updateField("about.title", v)} />
-    <Field label="Description" value={content.about.description} onChange={v => updateField("about.description", v)} multiline />
+    <h2 className="font-heading text-sm tracking-widest text-foreground mb-6 uppercase border-b border-radar pb-2">About Us</h2>
+    <Field label="Title" value={content.about.title} onChange={(v: string) => updateField("about.title", v)} />
+    <Field label="Subtitle" value={content.about.subtitle} onChange={(v: string) => updateField("about.subtitle", v)} />
+    <Field label="Mission Statement" value={content.about.mission} onChange={(v: string) => updateField("about.mission", v)} multiline />
   </div>
 );
 
-const ApplyEditor = ({ content, updateField, setContent }: any) => (
+const ApplyEditor = ({ content, updateField }: any) => (
   <div className="space-y-4">
-    <h2 className="font-heading text-sm tracking-widest text-foreground mb-6 uppercase">Applications</h2>
-    <Field label="Discord Link" value={content.apply.discordLink} onChange={v => updateField("apply.discordLink", v)} />
+    <h2 className="font-heading text-sm tracking-widest text-foreground mb-6 uppercase border-b border-radar pb-2">Recruitment</h2>
+    <Field label="Discord Join Link" value={content.apply.discordLink} onChange={(v: string) => updateField("apply.discordLink", v)} />
+    <Field label="Requirements Summary" value={content.apply.description} onChange={(v: string) => updateField("apply.description", v)} multiline />
   </div>
 );
 
