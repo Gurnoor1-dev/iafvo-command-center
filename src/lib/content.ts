@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { useState, useEffect } from 'react';
 
 export interface SiteContent {
   general: {
@@ -182,9 +183,61 @@ export const defaultContent: SiteContent = {
   },
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Deep-merge source onto target.
+ * - Nested objects are merged recursively.
+ * - Arrays from source replace target arrays (not merged element-by-element).
+ * - undefined / null source values keep the target (default) value.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function deepMerge<T extends object>(target: T, source: any): T {
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return target;
+  const result = { ...target } as Record<string, unknown>;
+  for (const key of Object.keys(source)) {
+    const sv = source[key];
+    const tv = (target as Record<string, unknown>)[key];
+    if (
+      sv !== null &&
+      sv !== undefined &&
+      typeof sv === 'object' &&
+      !Array.isArray(sv) &&
+      tv !== null &&
+      tv !== undefined &&
+      typeof tv === 'object' &&
+      !Array.isArray(tv)
+    ) {
+      result[key] = deepMerge(tv as object, sv);
+    } else if (sv !== undefined && sv !== null) {
+      result[key] = sv;
+    }
+    // if sv is undefined/null → keep tv (the default)
+  }
+  return result as T;
+}
+
+/**
+ * Returns true only if obj is a non-empty object containing at least one
+ * recognised IAFVO section key — guards against the empty `{}` rows.
+ */
+function isValidContent(obj: unknown): boolean {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+  const keys = Object.keys(obj as object);
+  if (keys.length === 0) return false;
+  return keys.some(k =>
+    ['general', 'about', 'staff', 'fleet', 'routes', 'hubs', 'ranks', 'apply'].includes(k)
+  );
+}
+
+// ─── Supabase ─────────────────────────────────────────────────────────────────
+
 const SUPABASE_ROW_ID = 1;
 
-/** Fetch content from Supabase. Falls back to defaultContent on error. */
+/**
+ * Fetch content from Supabase, always deep-merged with defaultContent.
+ * If the row is empty/missing/errored, returns defaultContent verbatim.
+ */
 export async function fetchContent(): Promise<SiteContent> {
   try {
     const { data, error } = await supabase
@@ -192,15 +245,21 @@ export async function fetchContent(): Promise<SiteContent> {
       .select('content')
       .eq('id', SUPABASE_ROW_ID)
       .single();
+
     if (error) throw error;
-    if (data?.content) return data.content as SiteContent;
+
+    if (isValidContent(data?.content)) {
+      return deepMerge(defaultContent, data.content);
+    }
+    // Row exists but content is `{}` — return defaults
+    return defaultContent;
   } catch (e) {
-    console.warn('Failed to fetch from Supabase, using defaults:', e);
+    console.warn('[IAFVO] Supabase fetch failed, using defaults:', e);
+    return defaultContent;
   }
-  return defaultContent;
 }
 
-/** Push content to Supabase (upsert so the row is created if missing). */
+/** Push the full content object to Supabase (upsert auto-creates the row). */
 export async function saveContent(content: SiteContent): Promise<void> {
   const { error } = await supabase
     .from('site_data')
@@ -208,25 +267,33 @@ export async function saveContent(content: SiteContent): Promise<void> {
   if (error) throw error;
 }
 
-// ─── React hook ────────────────────────────────────────────────────────────────
-
-import { useState, useEffect } from 'react';
+// ─── React hook ───────────────────────────────────────────────────────────────
 
 export function useContent() {
   const [content, setContent] = useState<SiteContent>(defaultContent);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchContent().then(c => { setContent(c); setLoading(false); });
+    // Initial load
+    fetchContent().then(c => {
+      setContent(c);
+      setLoading(false);
+    });
 
-    // Real-time subscription — any UPDATE on site_data triggers a refresh
+    // Realtime: push updates to all open tabs/browsers the moment admin saves
     const channel = supabase
-      .channel('site_data_changes')
+      .channel('site_data_realtime')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'site_data', filter: `id=eq.${SUPABASE_ROW_ID}` },
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'site_data',
+          filter: `id=eq.${SUPABASE_ROW_ID}`,
+        },
         (payload) => {
-          if (payload.new?.content) setContent(payload.new.content as SiteContent);
+          const raw = payload.new?.content;
+          setContent(isValidContent(raw) ? deepMerge(defaultContent, raw) : defaultContent);
         }
       )
       .subscribe();
@@ -237,7 +304,8 @@ export function useContent() {
   return { content, loading };
 }
 
-// Legacy sync getter — returns cached default; pages should use useContent() hook instead
+// Kept for legacy import compatibility — always returns defaults.
+// All components should use useContent() instead.
 export function getContent(): SiteContent {
   return defaultContent;
 }
