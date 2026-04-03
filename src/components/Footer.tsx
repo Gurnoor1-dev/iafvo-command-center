@@ -4,7 +4,6 @@ import logo from "@/assets/logo.png";
 
 const Footer = () => {
   const { content } = useContent();
-
   return (
     <footer className="border-t border-radar bg-background/80 backdrop-blur-sm">
       <div className="container mx-auto px-4 py-12">
@@ -38,5 +37,4 @@ const Footer = () => {
     </footer>
   );
 };
-
 export default Footer;
