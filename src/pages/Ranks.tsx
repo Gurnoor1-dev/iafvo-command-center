@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 const Ranks = () => {
   const { content } = useContent();
   const categories = [...new Set(content.ranks.rankList.map(r => r.category))];
-
   return (
     <Layout>
       <PageHeader title={content.ranks.title} subtitle={content.ranks.subtitle} />
@@ -24,11 +23,10 @@ const Ranks = () => {
                     className="group bg-card/40 border border-radar/40 rounded-sm overflow-hidden hover:border-radar transition-all duration-300">
                     <div className="h-40 bg-black/40 flex items-center justify-center relative border-b border-radar/20 overflow-hidden">
                       <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_49%,rgba(0,255,102,0.05)_50%,transparent_51%)] bg-[length:100%_4px] animate-pulse" />
-                      {rank.insignia ? (
-                        <img src={rank.insignia} alt={rank.rank} className="h-24 w-24 object-contain drop-shadow-[0_0_15px_rgba(0,255,102,0.4)] group-hover:scale-110 transition-transform duration-500" />
-                      ) : (
-                        <div className="w-16 h-16 border border-radar/20 rounded-full flex items-center justify-center text-radar/20 font-mono text-[10px]">NO SIG</div>
-                      )}
+                      {rank.insignia
+                        ? <img src={rank.insignia} alt={rank.rank} className="h-24 w-24 object-contain drop-shadow-[0_0_15px_rgba(0,255,102,0.4)] group-hover:scale-110 transition-transform duration-500" />
+                        : <div className="w-16 h-16 border border-radar/20 rounded-full flex items-center justify-center text-radar/20 font-mono text-[10px]">NO SIG</div>
+                      }
                     </div>
                     <div className="p-5">
                       <div className="flex justify-between items-center mb-3">
