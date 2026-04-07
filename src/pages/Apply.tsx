@@ -45,8 +45,7 @@ const Apply = () => {
           <motion.div className="mt-12 text-center" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <a href={content.apply.discordLink} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-10 py-4 bg-primary text-primary-foreground font-heading text-sm tracking-widest uppercase hover:bg-primary/90 glow-green transition-all">
-              <ExternalLink className="w-4 h-4" />
-              Apply via Discord
+              <ExternalLink className="w-4 h-4" />Apply via Discord
             </a>
             <p className="text-xs text-muted-foreground font-mono mt-4 tracking-wider">Applications are processed through our official Discord server</p>
           </motion.div>
