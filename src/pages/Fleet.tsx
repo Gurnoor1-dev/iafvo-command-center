@@ -1,46 +1,38 @@
 import Layout from "@/components/Layout";
-import { PageHeader } from "@/components/PageElements";
+import { PageHeader, MilitaryCard } from "@/components/PageElements";
 import { useContent } from "@/lib/content";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { Plane } from "lucide-react";
 
-const Routes = () => {
+const Fleet = () => {
   const { content } = useContent();
   return (
     <Layout>
-      <PageHeader title={content.routes.title} subtitle={content.routes.subtitle} />
+      <PageHeader title={content.fleet.title} subtitle={content.fleet.subtitle} />
       <section className="py-16">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <div className="hidden md:grid grid-cols-4 gap-4 px-6 py-3 border-b border-radar mb-2">
-            {["Origin", "Destination", "Distance", "Frequency"].map(h => (
-              <span key={h} className="font-mono text-[10px] tracking-widest text-radar-amber uppercase">{h}</span>
-            ))}
-          </div>
-          <div className="space-y-2">
-            {content.routes.routeList.map((route, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }} viewport={{ once: true }}
-                className="bg-card border border-radar rounded-sm p-4 md:p-6 hover:border-radar-green/50 transition-colors">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-4 items-center">
-                  <div>
-                    <span className="md:hidden font-mono text-[10px] text-radar-amber block mb-1">ORIGIN</span>
-                    <span className="font-mono text-sm text-foreground">{route.from}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ArrowRight className="w-3 h-3 text-radar hidden md:block" />
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {content.fleet.aircraft.map((ac, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} viewport={{ once: true }}>
+                <MilitaryCard>
+                  <div className="flex items-center gap-3 mb-4">
+                    {ac.image
+                      ? <img src={ac.image} alt={ac.name} className="w-16 h-12 object-cover rounded-sm border border-radar" />
+                      : <div className="w-16 h-12 bg-secondary flex items-center justify-center rounded-sm border border-radar"><Plane className="w-6 h-6 text-muted-foreground" /></div>
+                    }
                     <div>
-                      <span className="md:hidden font-mono text-[10px] text-radar-amber block mb-1">DESTINATION</span>
-                      <span className="font-mono text-sm text-foreground">{route.to}</span>
+                      <h3 className="font-heading text-xs font-bold text-foreground tracking-wider">{ac.name}</h3>
+                      <span className="font-mono text-[10px] text-radar tracking-widest">{ac.type}</span>
                     </div>
                   </div>
-                  <div>
-                    <span className="md:hidden font-mono text-[10px] text-radar-amber block mb-1">DISTANCE</span>
-                    <span className="text-sm text-muted-foreground font-body">{route.distance}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-radar-amber font-mono uppercase">Role:</span>
+                      <span className="text-sm text-foreground font-body">{ac.role}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground font-body">{ac.specs}</p>
                   </div>
-                  <div>
-                    <span className="md:hidden font-mono text-[10px] text-radar-amber block mb-1">FREQUENCY</span>
-                    <span className="text-sm text-radar font-mono">{route.frequency}</span>
-                  </div>
-                </div>
+                </MilitaryCard>
               </motion.div>
             ))}
           </div>
@@ -49,4 +41,4 @@ const Routes = () => {
     </Layout>
   );
 };
-export default Routes;
+export default Fleet;
