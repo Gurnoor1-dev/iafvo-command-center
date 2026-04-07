@@ -1,4 +1,3 @@
-// Fleet.tsx
 import Layout from "@/components/Layout";
 import { PageHeader, MilitaryCard } from "@/components/PageElements";
 import { useContent } from "@/lib/content";
@@ -17,13 +16,10 @@ const Fleet = () => {
               <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} viewport={{ once: true }}>
                 <MilitaryCard>
                   <div className="flex items-center gap-3 mb-4">
-                    {ac.image ? (
-                      <img src={ac.image} alt={ac.name} className="w-16 h-12 object-cover rounded-sm border border-radar" />
-                    ) : (
-                      <div className="w-16 h-12 bg-secondary flex items-center justify-center rounded-sm border border-radar">
-                        <Plane className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                    )}
+                    {ac.image
+                      ? <img src={ac.image} alt={ac.name} className="w-16 h-12 object-cover rounded-sm border border-radar" />
+                      : <div className="w-16 h-12 bg-secondary flex items-center justify-center rounded-sm border border-radar"><Plane className="w-6 h-6 text-muted-foreground" /></div>
+                    }
                     <div>
                       <h3 className="font-heading text-xs font-bold text-foreground tracking-wider">{ac.name}</h3>
                       <span className="font-mono text-[10px] text-radar tracking-widest">{ac.type}</span>
