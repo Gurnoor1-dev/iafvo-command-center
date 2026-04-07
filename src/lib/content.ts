@@ -1,5 +1,7 @@
+import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './supabase';
-import { useState, useEffect } from 'react';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface SiteContent {
   general: {
@@ -20,55 +22,27 @@ export interface SiteContent {
   staff: {
     title: string;
     subtitle: string;
-    members: Array<{
-      name: string;
-      rank: string;
-      position: string;
-      image: string;
-      bio: string;
-    }>;
+    members: Array<{ name: string; rank: string; position: string; image: string; bio: string }>;
   };
   fleet: {
     title: string;
     subtitle: string;
-    aircraft: Array<{
-      name: string;
-      type: string;
-      role: string;
-      image: string;
-      specs: string;
-    }>;
+    aircraft: Array<{ name: string; type: string; role: string; image: string; specs: string }>;
   };
   routes: {
     title: string;
     subtitle: string;
-    routeList: Array<{
-      from: string;
-      to: string;
-      distance: string;
-      frequency: string;
-    }>;
+    routeList: Array<{ from: string; to: string; distance: string; frequency: string }>;
   };
   hubs: {
     title: string;
     subtitle: string;
-    hubList: Array<{
-      name: string;
-      code: string;
-      location: string;
-      type: string;
-      description: string;
-    }>;
+    hubList: Array<{ name: string; code: string; location: string; type: string; description: string }>;
   };
   ranks: {
     title: string;
     subtitle: string;
-    rankList: Array<{
-      rank: string;
-      category: string;
-      description: string;
-      insignia: string;
-    }>;
+    rankList: Array<{ rank: string; category: string; description: string; insignia: string }>;
   };
   apply: {
     title: string;
@@ -80,12 +54,14 @@ export interface SiteContent {
   };
 }
 
+// ─── Defaults (always shown instantly, then overwritten by Supabase data) ─────
+
 export const defaultContent: SiteContent = {
   general: {
     orgName: "Indian Air Force Virtual Organisation",
     shortName: "IAFVO",
     tagline: "Guardians of the Virtual Skies",
-    footerText: "© 2024 Indian Air Force Virtual Organisation. All rights reserved. This is a virtual aviation organization and is not affiliated with the real Indian Air Force.",
+    footerText: "© 2024 Indian Air Force Virtual Organisation. All rights reserved. Not affiliated with the real Indian Air Force.",
     logoText: "IAFVO",
   },
   about: {
@@ -183,129 +159,147 @@ export const defaultContent: SiteContent = {
   },
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Supabase helpers ─────────────────────────────────────────────────────────
 
-/**
- * Deep-merge source onto target.
- * - Nested objects are merged recursively.
- * - Arrays from source replace target arrays (not merged element-by-element).
- * - undefined / null source values keep the target (default) value.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function deepMerge<T extends object>(target: T, source: any): T {
-  if (!source || typeof source !== 'object' || Array.isArray(source)) return target;
-  const result = { ...target } as Record<string, unknown>;
-  for (const key of Object.keys(source)) {
-    const sv = source[key];
-    const tv = (target as Record<string, unknown>)[key];
-    if (
-      sv !== null &&
-      sv !== undefined &&
-      typeof sv === 'object' &&
-      !Array.isArray(sv) &&
-      tv !== null &&
-      tv !== undefined &&
-      typeof tv === 'object' &&
-      !Array.isArray(tv)
-    ) {
-      result[key] = deepMerge(tv as object, sv);
-    } else if (sv !== undefined && sv !== null) {
-      result[key] = sv;
-    }
-    // if sv is undefined/null → keep tv (the default)
-  }
-  return result as T;
+const ROW_ID = 1;
+
+function mergeWithDefaults(raw: unknown): SiteContent {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return defaultContent;
+  const obj = raw as Record<string, unknown>;
+  // If completely empty ({}), return defaults
+  if (Object.keys(obj).length === 0) return defaultContent;
+  // Deep merge: default fills any missing sections/keys
+  return {
+    general:  { ...defaultContent.general,  ...(obj.general  as object || {}) },
+    about:    { ...defaultContent.about,    ...(obj.about    as object || {}) },
+    staff: {
+      ...defaultContent.staff,
+      ...(obj.staff as object || {}),
+      members: Array.isArray((obj.staff as Record<string,unknown>)?.members)
+        ? (obj.staff as Record<string,unknown>).members as SiteContent['staff']['members']
+        : defaultContent.staff.members,
+    },
+    fleet: {
+      ...defaultContent.fleet,
+      ...(obj.fleet as object || {}),
+      aircraft: Array.isArray((obj.fleet as Record<string,unknown>)?.aircraft)
+        ? (obj.fleet as Record<string,unknown>).aircraft as SiteContent['fleet']['aircraft']
+        : defaultContent.fleet.aircraft,
+    },
+    routes: {
+      ...defaultContent.routes,
+      ...(obj.routes as object || {}),
+      routeList: Array.isArray((obj.routes as Record<string,unknown>)?.routeList)
+        ? (obj.routes as Record<string,unknown>).routeList as SiteContent['routes']['routeList']
+        : defaultContent.routes.routeList,
+    },
+    hubs: {
+      ...defaultContent.hubs,
+      ...(obj.hubs as object || {}),
+      hubList: Array.isArray((obj.hubs as Record<string,unknown>)?.hubList)
+        ? (obj.hubs as Record<string,unknown>).hubList as SiteContent['hubs']['hubList']
+        : defaultContent.hubs.hubList,
+    },
+    ranks: {
+      ...defaultContent.ranks,
+      ...(obj.ranks as object || {}),
+      rankList: Array.isArray((obj.ranks as Record<string,unknown>)?.rankList)
+        ? (obj.ranks as Record<string,unknown>).rankList as SiteContent['ranks']['rankList']
+        : defaultContent.ranks.rankList,
+    },
+    apply: {
+      ...defaultContent.apply,
+      ...(obj.apply as object || {}),
+      requirements: Array.isArray((obj.apply as Record<string,unknown>)?.requirements)
+        ? (obj.apply as Record<string,unknown>).requirements as string[]
+        : defaultContent.apply.requirements,
+      positions: Array.isArray((obj.apply as Record<string,unknown>)?.positions)
+        ? (obj.apply as Record<string,unknown>).positions as string[]
+        : defaultContent.apply.positions,
+    },
+  };
 }
 
-/**
- * Returns true only if obj is a non-empty object containing at least one
- * recognised IAFVO section key — guards against the empty `{}` rows.
- */
-function isValidContent(obj: unknown): boolean {
-  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
-  const keys = Object.keys(obj as object);
-  if (keys.length === 0) return false;
-  return keys.some(k =>
-    ['general', 'about', 'staff', 'fleet', 'routes', 'hubs', 'ranks', 'apply'].includes(k)
-  );
-}
-
-// ─── Supabase ─────────────────────────────────────────────────────────────────
-
-const SUPABASE_ROW_ID = 1;
-
-/**
- * Fetch content from Supabase, always deep-merged with defaultContent.
- * If the row is empty/missing/errored, returns defaultContent verbatim.
- */
 export async function fetchContent(): Promise<SiteContent> {
   try {
     const { data, error } = await supabase
       .from('site_data')
       .select('content')
-      .eq('id', SUPABASE_ROW_ID)
+      .eq('id', ROW_ID)
       .single();
-
     if (error) throw error;
-
-    if (isValidContent(data?.content)) {
-      return deepMerge(defaultContent, data.content);
-    }
-    // Row exists but content is `{}` — return defaults
-    return defaultContent;
+    return mergeWithDefaults(data?.content);
   } catch (e) {
-    console.warn('[IAFVO] Supabase fetch failed, using defaults:', e);
+    console.error('[IAFVO] fetchContent error:', e);
     return defaultContent;
   }
 }
 
-/** Push the full content object to Supabase (upsert auto-creates the row). */
 export async function saveContent(content: SiteContent): Promise<void> {
   const { error } = await supabase
     .from('site_data')
-    .upsert({ id: SUPABASE_ROW_ID, content }, { onConflict: 'id' });
+    .upsert({ id: ROW_ID, content }, { onConflict: 'id' });
   if (error) throw error;
 }
 
-// ─── React hook ───────────────────────────────────────────────────────────────
+// ─── React Context (single fetch for whole app) ───────────────────────────────
 
-export function useContent() {
+import { type ReactNode } from 'react';
+import React from 'react';
+
+interface ContentCtx {
+  content: SiteContent;
+  loading: boolean;
+  refresh: () => void;
+}
+
+const ContentContext = createContext<ContentCtx>({
+  content: defaultContent,
+  loading: false,
+  refresh: () => {},
+});
+
+export function ContentProvider({ children }: { children: ReactNode }) {
   const [content, setContent] = useState<SiteContent>(defaultContent);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Initial load
+  const load = () => {
+    setLoading(true);
     fetchContent().then(c => {
       setContent(c);
       setLoading(false);
     });
+  };
 
-    // Realtime: push updates to all open tabs/browsers the moment admin saves
+  useEffect(() => {
+    load();
+
+    // Realtime — push live updates to all browsers when admin saves
     const channel = supabase
-      .channel('site_data_realtime')
+      .channel('site_data_changes')
       .on(
         'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'site_data',
-          filter: `id=eq.${SUPABASE_ROW_ID}`,
-        },
+        { event: 'UPDATE', schema: 'public', table: 'site_data', filter: `id=eq.${ROW_ID}` },
         (payload) => {
-          const raw = payload.new?.content;
-          setContent(isValidContent(raw) ? deepMerge(defaultContent, raw) : defaultContent);
+          setContent(mergeWithDefaults(payload.new?.content));
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { content, loading };
+  return React.createElement(ContentContext.Provider, { value: { content, loading, refresh: load } }, children);
 }
 
-// Kept for legacy import compatibility — always returns defaults.
-// All components should use useContent() instead.
+/** Use anywhere inside <ContentProvider> */
+export function useContent() {
+  return useContext(ContentContext);
+}
+
+/** Legacy compat — pages that still call getContent() get defaultContent.
+ *  Swap those pages to useContent() for live data. */
 export function getContent(): SiteContent {
   return defaultContent;
 }
