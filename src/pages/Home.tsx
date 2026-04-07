@@ -18,11 +18,9 @@ const Home = () => {
 
   return (
     <Layout>
-      {/* Hero */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
         <RadarBackground />
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-background" />
-        
         <div className="container mx-auto px-4 relative z-10 text-center">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
             <div className="flex justify-center mb-6">
@@ -50,16 +48,12 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Features */}
       <section className="py-20 border-t border-radar">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((f, i) => (
-              <motion.div
-                key={f.title}
-                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}
-                className="bg-card border border-radar p-6 relative group hover:border-radar-green/50 transition-colors"
-              >
+              <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}
+                className="bg-card border border-radar p-6 relative group hover:border-radar-green/50 transition-colors">
                 <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-radar-green/40" />
                 <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-radar-green/40" />
                 <f.icon className="w-8 h-8 text-radar mb-4" />
@@ -71,7 +65,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Stats */}
       <section className="py-16 bg-secondary/30 border-y border-radar">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
@@ -90,7 +83,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* CTA */}
       <section className="py-20">
         <div className="container mx-auto px-4 text-center">
           <h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-4">Ready to Serve?</h2>
