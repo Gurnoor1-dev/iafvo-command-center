@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ContentProvider } from "@/lib/content";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Staff from "./pages/Staff";
@@ -21,20 +22,23 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/staff" element={<Staff />} />
-          <Route path="/fleet" element={<Fleet />} />
-          <Route path="/routes" element={<RoutesPage />} />
-          <Route path="/hubs" element={<Hubs />} />
-          <Route path="/ranks" element={<Ranks />} />
-          <Route path="/apply" element={<Apply />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      {/* ContentProvider fetches from Supabase ONCE and shares via context */}
+      <ContentProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/staff" element={<Staff />} />
+            <Route path="/fleet" element={<Fleet />} />
+            <Route path="/routes" element={<RoutesPage />} />
+            <Route path="/hubs" element={<Hubs />} />
+            <Route path="/ranks" element={<Ranks />} />
+            <Route path="/apply" element={<Apply />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </ContentProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
