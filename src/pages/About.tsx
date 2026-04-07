@@ -1,10 +1,9 @@
-// ──────────────── About.tsx ────────────────
 import Layout from "@/components/Layout";
 import { PageHeader, MilitaryCard } from "@/components/PageElements";
 import { useContent } from "@/lib/content";
 import { motion } from "framer-motion";
 
-export const About = () => {
+const About = () => {
   const { content } = useContent();
   return (
     <Layout>
