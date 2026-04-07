@@ -12,7 +12,7 @@ const Routes = () => {
       <section className="py-16">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="hidden md:grid grid-cols-4 gap-4 px-6 py-3 border-b border-radar mb-2">
-            {["Origin","Destination","Distance","Frequency"].map(h => (
+            {["Origin", "Destination", "Distance", "Frequency"].map(h => (
               <span key={h} className="font-mono text-[10px] tracking-widest text-radar-amber uppercase">{h}</span>
             ))}
           </div>
