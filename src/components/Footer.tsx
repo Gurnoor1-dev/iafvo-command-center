@@ -27,11 +27,26 @@ const Footer = () => {
           </div>
           <div>
             <h4 className="font-heading text-xs tracking-widest text-radar-amber mb-4 uppercase">Connect</h4>
-            <p className="text-sm text-muted-foreground font-body">Join our community and become part of the {content.general.orgName} family.</p>
+            <p className="text-sm text-muted-foreground font-body mb-3">
+              Join our community on the Infinite Flight Community forum to apply or get in touch.
+            </p>
+            {content.general.ifcLink && (
+              <a
+                href={content.general.ifcLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sm text-radar hover:text-radar/80 font-mono tracking-wider transition-colors"
+              >
+                → Visit us on IFC
+              </a>
+            )}
           </div>
         </div>
-        <div className="mt-8 pt-6 border-t border-radar">
+        <div className="mt-8 pt-6 border-t border-radar space-y-2">
           <p className="text-xs text-muted-foreground text-center font-mono">{content.general.footerText}</p>
+          <p className="text-xs text-muted-foreground text-center font-mono">
+            This VA/VO is not affiliated with Infinite Flight and is under the IFVARB.
+          </p>
         </div>
       </div>
     </footer>
