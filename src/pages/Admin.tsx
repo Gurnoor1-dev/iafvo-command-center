@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { SiteContent, defaultContent, fetchContent, saveContent, useContent } from "@/lib/content";
+import { SiteContent, defaultContent, fetchContent, saveContent } from "@/lib/content";
 import {
   Shield, Save, LogOut, Plus, Trash2, ChevronDown, ChevronRight,
   Upload, Download, RefreshCw, AlertTriangle, Eye, EyeOff,
@@ -24,11 +24,19 @@ const Field = ({ label, value, onChange, multiline = false, placeholder = "" }: 
   </div>
 );
 
+const CheckField = ({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) => (
+  <div className="mb-4 flex items-center gap-3">
+    <input type="checkbox" checked={value} onChange={e => onChange(e.target.checked)}
+      className="w-4 h-4 accent-green-500" />
+    <label className="font-mono text-[10px] tracking-widest text-radar-amber uppercase">{label}</label>
+  </div>
+);
+
 const ImageField = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 1024 * 1024) { toast.error("Image must be under 1 MB"); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error("Image must be under 2 MB"); return; }
     const reader = new FileReader();
     reader.onloadend = () => onChange(reader.result as string);
     reader.readAsDataURL(file);
@@ -58,8 +66,37 @@ const GeneralEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => vo
       <Field label="Organization Full Name" value={c.general.orgName} onChange={v => u("orgName", v)} />
       <Field label="Short Name / Abbreviation" value={c.general.shortName} onChange={v => u("shortName", v)} />
       <Field label="Tagline" value={c.general.tagline} onChange={v => u("tagline", v)} />
-      <Field label="Footer Text" value={c.general.footerText} onChange={v => u("footerText", v)} multiline />
+      <Field label="IFC Community Link" value={c.general.ifcLink} onChange={v => u("ifcLink", v)} placeholder="https://community.infiniteflight.com/..." />
+      <Field label="Footer Text (copyright)" value={c.general.footerText} onChange={v => u("footerText", v)} multiline />
       <Field label="Logo Text (fallback)" value={c.general.logoText} onChange={v => u("logoText", v)} />
+    </div>
+  );
+};
+
+const HomeEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void }) => {
+  const cards = c.home.cards;
+  const updCard = (i: number, k: string, v: string) => set({ ...c, home: { ...c.home, cards: cards.map((card, idx) => idx === i ? { ...card, [k]: v } : card) } });
+  const addCard = () => set({ ...c, home: { ...c.home, cards: [...cards, { title: "", description: "" }] } });
+  const delCard = (i: number) => set({ ...c, home: { ...c.home, cards: cards.filter((_, idx) => idx !== i) } });
+  return (
+    <div>
+      <Field label="Operations Section Title" value={c.home.operationsTitle} onChange={v => set({ ...c, home: { ...c.home, operationsTitle: v } })} />
+      <Field label="Operations Description" value={c.home.operationsDescription} onChange={v => set({ ...c, home: { ...c.home, operationsDescription: v } })} multiline />
+      <div className="mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <span className="font-mono text-[10px] tracking-widest text-radar-amber uppercase">Feature Cards ({cards.length})</span>
+          <button onClick={addCard} className="flex items-center gap-1 px-3 py-1.5 text-xs bg-primary text-primary-foreground font-mono rounded-sm"><Plus className="w-3 h-3" /> Add Card</button>
+        </div>
+        <div className="space-y-4">
+          {cards.map((card, i) => (
+            <div key={i} className="bg-card border border-radar rounded-sm p-4 relative">
+              <button onClick={() => delCard(i)} className="absolute top-3 right-3 text-destructive"><Trash2 className="w-4 h-4" /></button>
+              <Field label={`Card ${i + 1} Title`} value={card.title} onChange={v => updCard(i, "title", v)} />
+              <Field label={`Card ${i + 1} Description`} value={card.description} onChange={v => updCard(i, "description", v)} multiline />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
@@ -71,6 +108,11 @@ const AboutEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void
       <Field label="Page Title" value={c.about.title} onChange={v => u("title", v)} />
       <Field label="Subtitle" value={c.about.subtitle} onChange={v => u("subtitle", v)} />
       <Field label="Main Description" value={c.about.description} onChange={v => u("description", v)} multiline />
+      <div className="border border-radar rounded-sm p-4 mb-4 bg-card/50">
+        <p className="font-mono text-[10px] tracking-widest text-radar-amber uppercase mb-3">Message from CEO</p>
+        <Field label="CEO Message Text" value={c.about.ceoMessage} onChange={v => u("ceoMessage", v)} multiline />
+        <Field label="CEO Name / Title (shown below message)" value={c.about.ceoName} onChange={v => u("ceoName", v)} placeholder="Air Chief Marshal — Chief of Air Staff, IAFVO" />
+      </div>
       <Field label="Mission Statement" value={c.about.mission} onChange={v => u("mission", v)} multiline />
       <Field label="Vision Statement" value={c.about.vision} onChange={v => u("vision", v)} multiline />
       <Field label="History" value={c.about.history} onChange={v => u("history", v)} multiline />
@@ -81,7 +123,7 @@ const AboutEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void
 const StaffEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void }) => {
   const items = c.staff.members;
   const upd = (i: number, k: string, v: string) => set({ ...c, staff: { ...c.staff, members: items.map((m, idx) => idx === i ? { ...m, [k]: v } : m) } });
-  const add = () => set({ ...c, staff: { ...c.staff, members: [...items, { name: "", rank: "", position: "", image: "", bio: "" }] } });
+  const add = () => set({ ...c, staff: { ...c.staff, members: [...items, { name: "", rank: "", position: "", image: "", bio: "", ifcProfile: "" }] } });
   const del = (i: number) => set({ ...c, staff: { ...c.staff, members: items.filter((_, idx) => idx !== i) } });
   return (
     <div>
@@ -101,7 +143,8 @@ const StaffEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void
               <Field label="Full Name" value={m.name} onChange={v => upd(i, "name", v)} />
               <Field label="Rank" value={m.rank} onChange={v => upd(i, "rank", v)} />
               <Field label="Position / Role" value={m.position} onChange={v => upd(i, "position", v)} />
-              <ImageField label="Photo" value={m.image} onChange={v => upd(i, "image", v)} />
+              <Field label="IFC Profile URL" value={m.ifcProfile || ""} onChange={v => upd(i, "ifcProfile", v)} placeholder="https://community.infiniteflight.com/u/username" />
+              <ImageField label="Profile Photo (or IFC avatar screenshot)" value={m.image} onChange={v => upd(i, "image", v)} />
               <div className="md:col-span-2"><Field label="Bio" value={m.bio} onChange={v => upd(i, "bio", v)} multiline /></div>
             </div>
           </div>
@@ -113,8 +156,8 @@ const StaffEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void
 
 const FleetEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void }) => {
   const items = c.fleet.aircraft;
-  const upd = (i: number, k: string, v: string) => set({ ...c, fleet: { ...c.fleet, aircraft: items.map((a, idx) => idx === i ? { ...a, [k]: v } : a) } });
-  const add = () => set({ ...c, fleet: { ...c.fleet, aircraft: [...items, { name: "", type: "", role: "", image: "", specs: "" }] } });
+  const upd = (i: number, k: string, v: string | boolean) => set({ ...c, fleet: { ...c.fleet, aircraft: items.map((a, idx) => idx === i ? { ...a, [k]: v } : a) } });
+  const add = () => set({ ...c, fleet: { ...c.fleet, aircraft: [...items, { name: "", type: "", role: "", image: "", specs: "", maxSpeed: "", range: "", crew: "", isGeneric: false }] } });
   const del = (i: number) => set({ ...c, fleet: { ...c.fleet, aircraft: items.filter((_, idx) => idx !== i) } });
   return (
     <div>
@@ -132,10 +175,16 @@ const FleetEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void
             <button onClick={() => del(i)} className="absolute top-3 right-3 text-destructive"><Trash2 className="w-4 h-4" /></button>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
               <Field label="Aircraft Name" value={a.name} onChange={v => upd(i, "name", v)} />
-              <Field label="Type" value={a.type} onChange={v => upd(i, "type", v)} />
+              <Field label="Type (e.g. Fighter, Transport)" value={a.type} onChange={v => upd(i, "type", v)} />
               <Field label="Role" value={a.role} onChange={v => upd(i, "role", v)} />
-              <ImageField label="Photo" value={a.image} onChange={v => upd(i, "image", v)} />
-              <div className="md:col-span-2"><Field label="Specs" value={a.specs} onChange={v => upd(i, "specs", v)} multiline /></div>
+              <div className="grid grid-cols-3 gap-2">
+                <Field label="Max Speed" value={a.maxSpeed || ""} onChange={v => upd(i, "maxSpeed", v)} placeholder="Mach 2.0" />
+                <Field label="Range" value={a.range || ""} onChange={v => upd(i, "range", v)} placeholder="3,000 km" />
+                <Field label="Crew" value={a.crew || ""} onChange={v => upd(i, "crew", v)} placeholder="2" />
+              </div>
+              <ImageField label="Aircraft Photo (Infinite Flight screenshot)" value={a.image} onChange={v => upd(i, "image", v)} />
+              <CheckField label="No livery in game — mark as Generic" value={a.isGeneric || false} onChange={v => upd(i, "isGeneric", v)} />
+              <div className="md:col-span-2"><Field label="Specs / Description" value={a.specs} onChange={v => upd(i, "specs", v)} multiline /></div>
             </div>
           </div>
         ))}
@@ -147,7 +196,7 @@ const FleetEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void
 const RoutesEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void }) => {
   const items = c.routes.routeList;
   const upd = (i: number, k: string, v: string) => set({ ...c, routes: { ...c.routes, routeList: items.map((r, idx) => idx === i ? { ...r, [k]: v } : r) } });
-  const add = () => set({ ...c, routes: { ...c.routes, routeList: [...items, { from: "", to: "", distance: "", frequency: "" }] } });
+  const add = () => set({ ...c, routes: { ...c.routes, routeList: [...items, { from: "", to: "", distance: "", frequency: "", aircraft: "", type: "" }] } });
   const del = (i: number) => set({ ...c, routes: { ...c.routes, routeList: items.filter((_, idx) => idx !== i) } });
   return (
     <div>
@@ -163,11 +212,13 @@ const RoutesEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => voi
         {items.map((r, i) => (
           <div key={i} className="bg-card border border-radar rounded-sm p-4 relative">
             <button onClick={() => del(i)} className="absolute top-3 right-3 text-destructive"><Trash2 className="w-4 h-4" /></button>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Field label="From (ICAO)" value={r.from} onChange={v => upd(i, "from", v)} placeholder="VIDP (Delhi)" />
-              <Field label="To (ICAO)" value={r.to} onChange={v => upd(i, "to", v)} placeholder="VABB (Mumbai)" />
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <Field label="From (ICAO + name)" value={r.from} onChange={v => upd(i, "from", v)} placeholder="VIDP (Hindon)" />
+              <Field label="To (ICAO + name)" value={r.to} onChange={v => upd(i, "to", v)} placeholder="VABB (Mumbai)" />
               <Field label="Distance" value={r.distance} onChange={v => upd(i, "distance", v)} placeholder="1,148 km" />
               <Field label="Frequency" value={r.frequency} onChange={v => upd(i, "frequency", v)} placeholder="Daily" />
+              <Field label="Compatible Aircraft" value={r.aircraft || ""} onChange={v => upd(i, "aircraft", v)} placeholder="C-17 Globemaster III" />
+              <Field label="Sortie Type" value={r.type || ""} onChange={v => upd(i, "type", v)} placeholder="Strategic Airlift" />
             </div>
           </div>
         ))}
@@ -179,7 +230,7 @@ const RoutesEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => voi
 const HubsEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void }) => {
   const items = c.hubs.hubList;
   const upd = (i: number, k: string, v: string) => set({ ...c, hubs: { ...c.hubs, hubList: items.map((h, idx) => idx === i ? { ...h, [k]: v } : h) } });
-  const add = () => set({ ...c, hubs: { ...c.hubs, hubList: [...items, { name: "", code: "", location: "", type: "", description: "" }] } });
+  const add = () => set({ ...c, hubs: { ...c.hubs, hubList: [...items, { name: "", code: "", location: "", type: "", description: "", image: "", runways: "", elevation: "" }] } });
   const del = (i: number) => set({ ...c, hubs: { ...c.hubs, hubList: items.filter((_, idx) => idx !== i) } });
   return (
     <div>
@@ -199,7 +250,10 @@ const HubsEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void 
               <Field label="Base Name" value={h.name} onChange={v => upd(i, "name", v)} />
               <Field label="ICAO Code" value={h.code} onChange={v => upd(i, "code", v)} />
               <Field label="Location" value={h.location} onChange={v => upd(i, "location", v)} />
-              <Field label="Hub Type" value={h.type} onChange={v => upd(i, "type", v)} />
+              <Field label="Hub Type (e.g. Primary Hub)" value={h.type} onChange={v => upd(i, "type", v)} />
+              <Field label="Runways (e.g. 2 — 09/27, 10/28)" value={h.runways || ""} onChange={v => upd(i, "runways", v)} />
+              <Field label="Elevation (e.g. 717 ft)" value={h.elevation || ""} onChange={v => upd(i, "elevation", v)} />
+              <ImageField label="Hub Photo (Infinite Flight or real)" value={h.image || ""} onChange={v => upd(i, "image", v)} />
               <div className="md:col-span-2"><Field label="Description" value={h.description} onChange={v => upd(i, "description", v)} multiline /></div>
             </div>
           </div>
@@ -212,7 +266,7 @@ const HubsEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void 
 const RanksEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void }) => {
   const items = c.ranks.rankList;
   const upd = (i: number, k: string, v: string) => set({ ...c, ranks: { ...c.ranks, rankList: items.map((r, idx) => idx === i ? { ...r, [k]: v } : r) } });
-  const add = () => set({ ...c, ranks: { ...c.ranks, rankList: [...items, { rank: "", category: "", description: "", insignia: "" }] } });
+  const add = () => set({ ...c, ranks: { ...c.ranks, rankList: [...items, { rank: "", category: "", description: "", insignia: "", requirements: "", perks: "", flightHours: "" }] } });
   const del = (i: number) => set({ ...c, ranks: { ...c.ranks, rankList: items.filter((_, idx) => idx !== i) } });
   return (
     <div>
@@ -231,8 +285,11 @@ const RanksEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
               <Field label="Rank Name" value={r.rank} onChange={v => upd(i, "rank", v)} />
               <Field label="Category (e.g. Air Officers)" value={r.category} onChange={v => upd(i, "category", v)} />
-              <Field label="Description" value={r.description} onChange={v => upd(i, "description", v)} multiline />
-              <ImageField label="Insignia Image" value={r.insignia} onChange={v => upd(i, "insignia", v)} />
+              <Field label="Flight Hours Required (e.g. 100+)" value={r.flightHours || ""} onChange={v => upd(i, "flightHours", v)} placeholder="100+" />
+              <ImageField label="Insignia / Badge Image" value={r.insignia} onChange={v => upd(i, "insignia", v)} />
+              <div className="md:col-span-2"><Field label="Description" value={r.description} onChange={v => upd(i, "description", v)} multiline /></div>
+              <div className="md:col-span-2"><Field label="Requirements (how to achieve this rank)" value={r.requirements || ""} onChange={v => upd(i, "requirements", v)} multiline placeholder="e.g. 100+ flight hours, 4 months active service..." /></div>
+              <div className="md:col-span-2"><Field label="Perks / Privileges at this rank" value={r.perks || ""} onChange={v => upd(i, "perks", v)} multiline placeholder="e.g. Flight scheduling authority, event hosting rights..." /></div>
             </div>
           </div>
         ))}
@@ -252,7 +309,11 @@ const ApplyEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void
         <Field label="Subtitle" value={c.apply.subtitle} onChange={v => u("subtitle", v)} />
       </div>
       <Field label="Description" value={c.apply.description} onChange={v => u("description", v)} multiline />
-      <Field label="Discord Invite Link" value={c.apply.discordLink} onChange={v => u("discordLink", v)} placeholder="https://discord.gg/..." />
+      <div className="bg-card/50 border border-radar rounded-sm p-4 mb-4">
+        <p className="font-mono text-[10px] tracking-widest text-radar-amber uppercase mb-3">Application Links</p>
+        <Field label="IFC Link (primary — used for Apply button)" value={c.apply.ifcLink || ""} onChange={v => u("ifcLink", v)} placeholder="https://community.infiniteflight.com/t/..." />
+        <Field label="Discord Link (optional — shown as secondary)" value={c.apply.discordLink || ""} onChange={v => u("discordLink", v)} placeholder="Leave blank to hide" />
+      </div>
 
       <div className="mt-4">
         <div className="flex items-center justify-between mb-2">
@@ -297,6 +358,7 @@ const ApplyEditor = ({ c, set }: { c: SiteContent; set: (c: SiteContent) => void
 
 const SECTIONS = [
   { key: "general", label: "General" },
+  { key: "home", label: "Home Page" },
   { key: "about", label: "About Us" },
   { key: "staff", label: "Staff" },
   { key: "fleet", label: "Fleet" },
@@ -316,12 +378,10 @@ const Admin = () => {
   const [saving, setSaving] = useState(false);
   const [unsaved, setUnsaved] = useState(false);
 
-  // Check session on mount
   useEffect(() => {
     if (sessionStorage.getItem("iafvo_admin") === "true") setAuthenticated(true);
   }, []);
 
-  // When authenticated, load from Supabase directly (not context, to get editable copy)
   useEffect(() => {
     if (!authenticated) return;
     setFetching(true);
@@ -425,7 +485,6 @@ const Admin = () => {
     );
   }
 
-  // ── Loading ─────────────────────────────────────────────────────────────────
   if (fetching) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -437,7 +496,6 @@ const Admin = () => {
     );
   }
 
-  // ── Main UI ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
@@ -505,6 +563,7 @@ const Admin = () => {
             Editing: {SECTIONS.find(s => s.key === activeSection)?.label}
           </h2>
           {activeSection === "general" && <GeneralEditor c={localContent} set={handleChange} />}
+          {activeSection === "home"    && <HomeEditor    c={localContent} set={handleChange} />}
           {activeSection === "about"   && <AboutEditor   c={localContent} set={handleChange} />}
           {activeSection === "staff"   && <StaffEditor   c={localContent} set={handleChange} />}
           {activeSection === "fleet"   && <FleetEditor   c={localContent} set={handleChange} />}
